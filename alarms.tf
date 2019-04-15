@@ -13,22 +13,20 @@ locals {
   region = var.region == "" ? data.aws_region.current.name : var.region
 
   metric_name = [
-    "AuthorizationFailureCount",
-    "S3BucketActivityEventCount",
-    "SecurityGroupEventCount",
-    "NetworkAclEventCount",
-    "GatewayEventCount",
-    "VpcEventCount",
-    "EC2InstanceEventCount",
-    "EC2LargeInstanceEventCount",
-    "CloudTrailEventCount",
-    "ConsoleSignInFailureCount",
-    "IAMPolicyEventCount",
-    "ConsoleSignInWithoutMfaCount",
-    "RootAccountUsageCount",
-    "KMSKeyPendingDeletionErrorCount",
-    "AWSConfigChangeCount",
-    "RouteTableChangesCount",
+    "UnauthorizedAPICalls",
+    "NoMFAConsoleSignin",
+    "RootUsage",
+    "IAMChanges",
+    "CloudTrailCfgChanges",
+    "ConsoleSigninFailures",
+    "DisableOrDeleteCMK",
+    "S3BucketPolicyChanges",
+    "AWSConfigChanges",
+    "SecurityGroupChanges",
+    "NACLChanges",
+    "NetworkGWChanges",
+    "RouteTableChanges",
+    "VPCChanges",
   ]
 
   metric_namespace = var.metric_namespace
@@ -36,40 +34,36 @@ locals {
 
   filter_pattern = [
     "{ ($.errorCode = \"*UnauthorizedOperation\") || ($.errorCode = \"AccessDenied*\") }",
-    "{ ($.eventSource = s3.amazonaws.com) && (($.eventName = PutBucketAcl) || ($.eventName = PutBucketPolicy) || ($.eventName = PutBucketCors) || ($.eventName = PutBucketLifecycle) || ($.eventName = PutBucketReplication) || ($.eventName = DeleteBucketPolicy) || ($.eventName = DeleteBucketCors) || ($.eventName = DeleteBucketLifecycle) || ($.eventName = DeleteBucketReplication)) }",
-    "{ ($.eventName = AuthorizeSecurityGroupIngress) || ($.eventName = AuthorizeSecurityGroupEgress) || ($.eventName = RevokeSecurityGroupIngress) || ($.eventName = RevokeSecurityGroupEgress) || ($.eventName = CreateSecurityGroup) || ($.eventName = DeleteSecurityGroup) }",
-    "{ ($.eventName = CreateNetworkAcl) || ($.eventName = CreateNetworkAclEntry) || ($.eventName = DeleteNetworkAcl) || ($.eventName = DeleteNetworkAclEntry) || ($.eventName = ReplaceNetworkAclEntry) || ($.eventName = ReplaceNetworkAclAssociation) }",
-    "{ ($.eventName = CreateCustomerGateway) || ($.eventName = DeleteCustomerGateway) || ($.eventName = AttachInternetGateway) || ($.eventName = CreateInternetGateway) || ($.eventName = DeleteInternetGateway) || ($.eventName = DetachInternetGateway) }",
-    "{ ($.eventName = CreateVpc) || ($.eventName = DeleteVpc) || ($.eventName = ModifyVpcAttribute) || ($.eventName = AcceptVpcPeeringConnection) || ($.eventName = CreateVpcPeeringConnection) || ($.eventName = DeleteVpcPeeringConnection) || ($.eventName = RejectVpcPeeringConnection) || ($.eventName = AttachClassicLinkVpc) || ($.eventName = DetachClassicLinkVpc) || ($.eventName = DisableVpcClassicLink) || ($.eventName = EnableVpcClassicLink) }",
-    "{ ($.eventName = RunInstances) || ($.eventName = RebootInstances) || ($.eventName = StartInstances) || ($.eventName = StopInstances) || ($.eventName = TerminateInstances) }",
-    "{ ($.eventName = RunInstances) && (($.requestParameters.instanceType = *.8xlarge) || ($.requestParameters.instanceType = *.4xlarge) || ($.requestParameters.instanceType = *.16xlarge) || ($.requestParameters.instanceType = *.10xlarge) || ($.requestParameters.instanceType = *.12xlarge) || ($.requestParameters.instanceType = *.24xlarge)) }",
-    "{ ($.eventName = CreateTrail) || ($.eventName = UpdateTrail) || ($.eventName = DeleteTrail) || ($.eventName = StartLogging) || ($.eventName = StopLogging) }",
-    "{ ($.eventName = ConsoleLogin) && ($.errorMessage = \"Failed authentication\") }",
-    "{ ($.eventName = DeleteGroupPolicy) || ($.eventName = DeleteRolePolicy) ||($.eventName=DeleteUserPolicy)||($.eventName=PutGroupPolicy)||($.eventName=PutRolePolicy)||($.eventName=PutUserPolicy)||($.eventName=CreatePolicy)||($.eventName=DeletePolicy)||($.eventName=CreatePolicyVersion)||($.eventName=DeletePolicyVersion)||($.eventName=AttachRolePolicy)||($.eventName=DetachRolePolicy)||($.eventName=AttachUserPolicy)||($.eventName=DetachUserPolicy)||($.eventName=AttachGroupPolicy)||($.eventName=DetachGroupPolicy)}",
-    "{ $.eventName = \"ConsoleLogin\" && $.additionalEventData.MFAUsed = \"No\" }",
-    "{ $.userIdentity.type = \"Root\" && $.userIdentity.invokedBy NOT EXISTS && $.eventType != \"AwsServiceEvent\" }",
-    "{ $.eventSource = kms* && $.errorMessage = \"* is pending deletion.\"}",
-    "{ $.eventSource = config.amazonaws.com && (($.eventName=StopConfigurationRecorder)||($.eventName=DeleteDeliveryChannel) ||($.eventName=PutDeliveryChannel)||($.eventName=PutConfigurationRecorder)) }",
-    "{ ($.eventName = CreateRoute) || ($.eventName = CreateRouteTable) || ($.eventName = ReplaceRoute) || ($.eventName = ReplaceRouteTableAssociation) || ($.eventName = DeleteRouteTable) || ($.eventName = DeleteRoute) || ($.eventName = DisassociateRouteTable) }",
+    "{ ($.eventName = \"ConsoleLogin\") && ($.additionalEventData.MFAUsed != \"Yes\") }"
+    "{ $.userIdentity.type = \"Root\" && $.userIdentity.invokedBy NOT EXISTS && $.eventType != \"AwsServiceEvent\" }"
+    "{($.eventName=DeleteGroupPolicy)||($.eventName=DeleteRolePolicy)||($.eventName=DeleteUserPolicy)||($.eventName=PutGroupPolicy)||($.eventName=PutRolePolicy)||($.eventName=PutUserPolicy)||($.eventName=CreatePolicy)||($.eventName=DeletePolicy)||($.eventName=CreatePolicyVersion)||($.eventName=DeletePolicyVersion)||($.eventName=AttachRolePolicy)||($.eventName=DetachRolePolicy)||($.eventName=AttachUserPolicy)||($.eventName=DetachUserPolicy)||($.eventName=AttachGroupPolicy)||($.eventName=DetachGroupPolicy)}"
+    "{ ($.eventName = CreateTrail) || ($.eventName = UpdateTrail) || ($.eventName = DeleteTrail) || ($.eventName = StartLogging) || ($.eventName = StopLogging) }"
+    "{ ($.eventName = ConsoleLogin) && ($.errorMessage = \"Failed authentication\") }"
+    "{ ($.eventSource = kms.amazonaws.com) && (($.eventName = DisableKey) || ($.eventName = ScheduleKeyDeletion)) }"
+    "{ ($.eventSource = s3.amazonaws.com) && (($.eventName = PutBucketAcl) || ($.eventName = PutBucketPolicy) || ($.eventName = PutBucketCors) || ($.eventName = PutBucketLifecycle) || ($.eventName = PutBucketReplication) || ($.eventName = DeleteBucketPolicy) || ($.eventName = DeleteBucketCors) || ($.eventName = DeleteBucketLifecycle) || ($.eventName = DeleteBucketReplication)) }"
+    "{ ($.eventSource = config.amazonaws.com) && (($.eventName=StopConfigurationRecorder)||($.eventName=DeleteDeliveryChannel)||($.eventName=PutDeliveryChannel)||($.eventName=PutConfigurationRecorder)) }"
+    "{ ($.eventName = AuthorizeSecurityGroupIngress) || ($.eventName = AuthorizeSecurityGroupEgress) || ($.eventName = RevokeSecurityGroupIngress) || ($.eventName = RevokeSecurityGroupEgress) || ($.eventName = CreateSecurityGroup) || ($.eventName = DeleteSecurityGroup)}"
+    "{ ($.eventName = CreateNetworkAcl) || ($.eventName = CreateNetworkAclEntry) || ($.eventName = DeleteNetworkAcl) || ($.eventName = DeleteNetworkAclEntry) || ($.eventName = ReplaceNetworkAclEntry) || ($.eventName = ReplaceNetworkAclAssociation) }"
+    "{ ($.eventName = CreateCustomerGateway) || ($.eventName = DeleteCustomerGateway) || ($.eventName = AttachInternetGateway) || ($.eventName = CreateInternetGateway) || ($.eventName = DeleteInternetGateway) || ($.eventName = DetachInternetGateway) }"
+    "{ ($.eventName = CreateRoute) || ($.eventName = CreateRouteTable) || ($.eventName = ReplaceRoute) || ($.eventName = ReplaceRouteTableAssociation) || ($.eventName = DeleteRouteTable) || ($.eventName = DeleteRoute) || ($.eventName = DisassociateRouteTable) }"
+    "{ ($.eventName = CreateVpc) || ($.eventName = DeleteVpc) || ($.eventName = ModifyVpcAttribute) || ($.eventName = AcceptVpcPeeringConnection) || ($.eventName = CreateVpcPeeringConnection) || ($.eventName = DeleteVpcPeeringConnection) || ($.eventName = RejectVpcPeeringConnection) || ($.eventName = AttachClassicLinkVpc) || ($.eventName = DetachClassicLinkVpc) || ($.eventName = DisableVpcClassicLink) || ($.eventName = EnableVpcClassicLink) }"
   ]
 
   alarm_description = [
-    "Alarms when an unauthorized API call is made.",
-    "Alarms when an API call is made to S3 to put or delete a Bucket, Bucket Policy or Bucket ACL.",
-    "Alarms when an API call is made to create, update or delete a Security Group.",
-    "Alarms when an API call is made to create, update or delete a Network ACL.",
-    "Alarms when an API call is made to create, update or delete a Customer or Internet Gateway.",
-    "Alarms when an API call is made to create, update or delete a VPC, VPC peering connection or VPC connection to classic.",
-    "Alarms when an API call is made to create, terminate, start, stop or reboot an EC2 instance.",
-    "Alarms when an API call is made to create, terminate, start, stop or reboot a 4x-large or greater EC2 instance.",
-    "Alarms when an API call is made to create, update or delete a .cloudtrail. trail, or to start or stop logging to a trail.",
-    "Alarms when an unauthenticated API call is made to sign into the console.",
-    "Alarms when an API call is made to change an IAM policy.",
-    "Alarms when a user logs into the console without MFA.",
-    "Alarms when a root account usage is detected.",
-    "Alarms when a customer created KMS key is pending deletion.",
-    "Alarms when AWS Config changes.",
-    "Alarms when route table changes are detected.",
+    "3.1 Monitoring unauthorized API calls will help reveal application errors and may reduce time to detect malicious activity.",
+    "3.2 Monitoring for single-factor console logins will increase visibility into accounts that are not protected by MFA.",
+    "3.3 Monitoring for root account logins will provide visibility into the use of a fully privileged account and an opportunity to reduce the use of it.",
+    "3.4 Monitoring changes to IAM policies will help ensure authentication and authorization controls remain intact.",
+    "3.5 Monitoring changes to CloudTrail's configuration will help ensure sustained visibility to activities performed in the AWS account.",
+    "3.6 Monitoring failed console logins may decrease lead time to detect an attempt to brute force a credential, which may provide an indicator, such as source IP, that can be used in other event correlation.",
+    "3.7 Monitoring failed console logins may decrease lead time to detect an attempt to brute force a credential, which may provide an indicator, such as source IP, that can be used in other event correlation.",
+    "3.8 Monitoring changes to S3 bucket policies may reduce time to detect and correct permissive policies on sensitive S3 buckets.",
+    "3.9 Monitoring changes to AWS Config configuration will help ensure sustained visibility of configuration items within the AWS account.",
+    "3.10 Monitoring changes to security group will help ensure that resources and services are not unintentionally exposed.",
+    "3.11 Monitoring changes to NACLs will help ensure that AWS resources and services are not unintentionally exposed.",
+    "3.12 Monitoring changes to network gateways will help ensure that all ingress/egress traffic traverses the VPC border via a controlled path.",
+    "3.13 Monitoring changes to route tables will help ensure that all VPC traffic flows through an expected path.",
+    "3.14 Monitoring changes to VPC will help ensure that all VPC traffic flows through an expected path.",
   ]
 }
 
@@ -164,8 +158,8 @@ EOF
 locals {
   # Two Columns
   # Will experiment with this values
-  layout_x = [0, 12, 0, 12, 0, 12, 0, 12, 0, 12, 0, 12, 0, 12, 0, 12]
+  layout_x = [0, 12, 0, 12, 0, 12, 0, 12, 0, 12, 0, 12, 0, 12]
 
-  layout_y = [0, 0, 7, 7, 15, 15, 22, 22, 29, 29, 36, 36, 43, 43, 50, 50]
+  layout_y = [0, 0, 7, 7, 15, 15, 22, 22, 29, 29, 36, 36, 43, 43]
 }
 
