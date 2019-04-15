@@ -14,7 +14,7 @@ locals {
 
   metric_name = [
     "UnauthorizedAPICalls",
-    "NoMFAConsoleSignin",
+    "ConsoleLoginNoMFAUsed",
     "RootUsage",
     "IAMChanges",
     "CloudTrailCfgChanges",
