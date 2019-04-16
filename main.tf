@@ -58,5 +58,25 @@ data "aws_iam_policy_document" "sns_topic_policy" {
       identifiers = ["events.amazonaws.com"]
     }
   }
+
+  statement {
+    sid       = "Allow ${local.alert_for} CloudwatchAlarms"
+    actions   = ["sns:Publish"]
+    resources = ["${local.sns_topic_arn}"]
+
+    principals {
+      type        = "AWS"
+      identifiers = ["*"]
+    }
+
+    condition {
+      test     = "ArnLike"
+      variable = "AWS:SourceArn"
+
+      values = [
+        "arn:aws:iam::${data.aws_caller_identity.default.account_id}:alarm:*",
+      ]
+    }
+  }
 }
 
