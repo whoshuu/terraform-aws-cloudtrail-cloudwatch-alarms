@@ -74,7 +74,7 @@ data "aws_iam_policy_document" "sns_topic_policy" {
       variable = "AWS:SourceArn"
 
       values = [
-        "arn:aws:iam::${data.aws_caller_identity.default.account_id}:alarm:*",
+        "arn:aws:iam:${local.region}:${data.aws_caller_identity.default.account_id}:alarm:*",
       ]
     }
   }
