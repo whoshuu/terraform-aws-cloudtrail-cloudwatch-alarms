@@ -21,7 +21,7 @@ locals {
     "ConsoleSigninFailedLogin",
     "KmsCmkDisableKeyOrScheduleKeyDeletion",
     "S3BucketPolicyChanges",
-    "AWSConfigChanges",
+    "AWSConfigurationRecorderChanges",
     "SecurityGroupChanges",
     "NetworkAclChanges",
     "InternetCustomerGatewayChanges",
